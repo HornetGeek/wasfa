@@ -39,7 +39,8 @@ class RegisterView(APIView):
                 email=user_data['email'],
                 password=user_data['password'],
                 fullName=user_data.get('fullName', ''),
-                fcm_token=user_data.get('fcm_token', '')
+                fcm_token=user_data.get('fcm_token', ''),
+                role=user_data.get('role', 'doctor')
             )
             return Response({"message": "Account created successfully"}, status=HTTP_201_CREATED)
         return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
@@ -61,7 +62,18 @@ class CustomUserViewSet(viewsets.ModelViewSet):
     queryset = CustomUsers.objects.all()
     serializer_class = UserListSerializer
 
+class UserListView(viewsets.ReadOnlyModelViewSet):
+    serializer_class = UserListSerializer
 
+    def get_queryset(self):
+        role = self.request.query_params.get('role', None)  # Get the 'role' parameter from the request
+        if role == 'doctor':
+            return CustomUsers.objects.filter(role='doctor')
+        elif role == 'pharmacy':
+            return CustomUsers.objects.filter(role='pharmacy')
+        else:
+            return CustomUsers.objects.none()  # Return empty queryset if role is invalid
+        
 class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all()
     serializer_class = PatientSerializer

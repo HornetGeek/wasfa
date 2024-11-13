@@ -20,6 +20,7 @@ router4.register(r'drugs', DrugViewSet)
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='token_obtain_pair'),
     path('login/', EmailTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('filter/users/', UserListView.as_view({'get': 'list'}), name='user-list'),
     path('', include(router.urls)),
     path('', include(router2.urls)),
     path('', include(router3.urls)),

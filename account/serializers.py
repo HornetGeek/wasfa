@@ -16,7 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUsers  # Use CustomUsers directly
-        fields = ('id', 'email', 'fullName', 'created_at', 'fcm_token', "civil_number","Practice_License_Number","role" )    
+        fields = ('id', 'email', 'fullName', 'created_at', 'fcm_token', "civil_number","Practice_License_Number","role" , "blocked")    
 
 
 
@@ -35,6 +35,8 @@ class CustomTokenObtainSerializer(serializers.Serializer):
         print(user)
         if not user:
             raise serializers.ValidationError('No active account found with the given credentials')
+        if user.blocked:
+            raise serializers.ValidationError('This user account is blocked')
 
         if not user.check_password(password):
             raise serializers.ValidationError('Invalid credentials')

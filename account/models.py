@@ -57,7 +57,7 @@ class CustomUsers(AbstractBaseUser):
     Practice_License_Number = models.CharField(max_length=255, default='')
     fcm_token = models.CharField(max_length=255, default='')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='doctor')
-    
+    blocked = models.BooleanField(default=False) 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
