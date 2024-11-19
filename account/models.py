@@ -58,6 +58,7 @@ class CustomUsers(AbstractBaseUser):
     fcm_token = models.CharField(max_length=255, default='')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='doctor')
     blocked = models.BooleanField(default=False) 
+    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 

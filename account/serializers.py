@@ -9,14 +9,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUsers  # Use CustomUsers directly
-        fields = ('id', 'email', 'fullName','password', 'created_at', 'fcm_token', "civil_number","Practice_License_Number","role" )    
+        fields = ('id', 'email', 'fullName','password', 'created_at', 'fcm_token', "civil_number","Practice_License_Number","role", "profile_picture" )    
 
 
 
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUsers  # Use CustomUsers directly
-        fields = ('id', 'email', 'fullName', 'created_at', 'fcm_token', "civil_number","Practice_License_Number","role" , "blocked")    
+        fields = ('id', 'email', 'fullName', 'created_at', 'fcm_token', "civil_number","Practice_License_Number","role" , "blocked","profile_picture")    
 
 
 
@@ -48,10 +48,11 @@ class CustomTokenObtainSerializer(serializers.Serializer):
     def create(self, validated_data):
         user = validated_data['user']
         refresh = RefreshToken.for_user(user)
+        serialized_user = UserSerializer(user).data
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
-            'email': user.email,
+            'user': serialized_user,
         }
     
 
