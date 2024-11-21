@@ -106,7 +106,34 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
     queryset = Prescription.objects.all()
     serializer_class = PrescriptionSerializer
 
+
+    @action(detail=False, methods=['get'], url_path='by-patient')
+    def get_prescriptions_by_patient(self, request):
+        patient_id = request.query_params.get('patientId')
+        if not patient_id:
+            return Response({"error": "patientId parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        prescriptions = Prescription.objects.filter(patientId=patient_id)
+        if not prescriptions.exists():
+            return Response({"detail": "No prescriptions found for this patient ID."}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = self.get_serializer(prescriptions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 # Drug ViewSet
 class DrugViewSet(viewsets.ModelViewSet):
     queryset = Drug.objects.all()
     serializer_class = DrugSerializer
+
+    @action(detail=False, methods=['get'], url_path='by-prescription')
+    def get_drugs_by_prescription(self, request):
+        prescription_id = request.query_params.get('prescriptionId')
+        if not prescription_id:
+            return Response({"error": "prescriptionId parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        drugs = Drug.objects.filter(prescriptionId=prescription_id)
+        if not drugs.exists():
+            return Response({"detail": "No drugs found for this prescription ID."}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = self.get_serializer(drugs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
