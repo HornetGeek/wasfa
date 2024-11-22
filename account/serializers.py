@@ -59,7 +59,7 @@ class CustomTokenObtainSerializer(serializers.Serializer):
 class PatientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Patient
-        fields = ('id', 'doctorId', 'name', 'idNumber', 'phone_number')
+        fields = ('id', 'doctorId', 'name', 'idNumber', 'phone_number','created_at')
 
 
 class PrescriptionSerializer(serializers.ModelSerializer):

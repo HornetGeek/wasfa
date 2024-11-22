@@ -24,7 +24,15 @@ class PatientPagination(PageNumberPagination):
     page_size = 10  # Number of results per page
     page_size_query_param = 'page_size'  # Allow clients to customize the page size
     max_page_size = 100  # Limit on the maximum number of results per page
-
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,  # Total items
+            'total_pages': self.page.paginator.num_pages,  # Total pages
+            'current_page': self.page.number,  # Current page number
+            'next': self.get_next_link(),  # Next page URL
+            'previous': self.get_previous_link(),  # Previous page URL
+            'results': data  # Paginated results
+        })
 
 class RegisterView(APIView):
     http_method_names = ['post']

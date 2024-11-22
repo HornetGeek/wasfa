@@ -73,7 +73,7 @@ class Patient(models.Model):
     name = models.CharField(max_length=255, default='')
     idNumber = models.CharField(max_length=255, default='')
     phone_number = models.CharField(max_length=255, default='')
-
+    created_at = models.DateTimeField("Created at", auto_now=True)
 
 class Prescription(models.Model):
     TYPE_CHOICES = [
@@ -90,3 +90,4 @@ class Prescription(models.Model):
 class Drug(models.Model):
     prescriptionId = models.ForeignKey(Prescription, on_delete=models.CASCADE)
     name = models.CharField(max_length=255, default='')
+    created_at = models.DateTimeField("Created at", auto_now=True)
