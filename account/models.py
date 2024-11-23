@@ -47,7 +47,13 @@ class CustomUsers(AbstractBaseUser):
     ROLE_CHOICES = (
         ('doctor', 'Doctor'),
         ('pharmacy', 'Pharmacy'),
+        ('ministryAdmin', 'MinistryAdmin'),
+        ('appAdmin','AppAdmin')
     )
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
+    ]
 
     username = None
     created_at = models.DateTimeField("Created at", auto_now=True)
@@ -59,9 +65,11 @@ class CustomUsers(AbstractBaseUser):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='doctor')
     blocked = models.BooleanField(default=False) 
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+    title = models.CharField(max_length=20, choices=ROLE_CHOICES, default='')
+    country = models.CharField(max_length=20, choices=ROLE_CHOICES, default='')
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
-
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     objects = CustomUserManager()
 
     def __str__(self):
@@ -88,6 +96,11 @@ class Prescription(models.Model):
     type = models.CharField(max_length=50, choices=TYPE_CHOICES, default='internal')
 
 class Drug(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
+    ]
     prescriptionId = models.ForeignKey(Prescription, on_delete=models.CASCADE)
     name = models.CharField(max_length=255, default='')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField("Created at", auto_now=True)

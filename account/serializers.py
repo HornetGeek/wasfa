@@ -9,14 +9,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUsers  # Use CustomUsers directly
-        fields = ('id', 'email', 'fullName','password', 'created_at', 'fcm_token', "civil_number","Practice_License_Number","role", "profile_picture" )    
+        fields = ('id', 'email', 'fullName','password', 'created_at', 'fcm_token', "civil_number","Practice_License_Number","role", "profile_picture" ,'title', 'country', 'status')    
 
 
 
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUsers  # Use CustomUsers directly
-        fields = ('id', 'email', 'fullName', 'created_at', 'fcm_token', "civil_number","Practice_License_Number","role" , "blocked","profile_picture")    
+        fields = ('id', 'email', 'fullName', 'created_at', 'fcm_token', "civil_number","Practice_License_Number","role" , "blocked","profile_picture", 'title', 'country', 'status')    
 
 
 
@@ -71,5 +71,41 @@ class PrescriptionSerializer(serializers.ModelSerializer):
 class DrugSerializer(serializers.ModelSerializer):
     class Meta:
         model = Drug
-        fields = ['id', 'prescriptionId', 'name']
+        fields = ['id', 'prescriptionId', 'name', 'status']
         
+
+class ConfirmDrugsSerializer(serializers.Serializer):
+    prescription_id = serializers.IntegerField()
+    drug_ids = serializers.ListField(
+        child=serializers.IntegerField(), min_length=1
+    )
+
+    def validate(self, data):
+        prescription_id = data.get('prescription_id')
+        drug_ids = data.get('drug_ids')
+
+        # Validate if the prescription exists
+        if not Prescription.objects.filter(id=prescription_id).exists():
+            raise serializers.ValidationError("Prescription does not exist.")
+
+        # Fetch all drugs with the provided IDs
+        drugs = Drug.objects.filter(id__in=drug_ids)
+
+        # Check if any of the specified drugs do not exist
+        missing_drug_ids = set(drug_ids) - set(drugs.values_list('id', flat=True))
+        if missing_drug_ids:
+            raise serializers.ValidationError(
+                f"Drugs with IDs {missing_drug_ids} do not exist."
+            )
+
+        # Validate if all drugs belong to the specified prescription
+        invalid_drugs = drugs.exclude(prescriptionId_id=prescription_id)
+        if invalid_drugs.exists():
+            raise serializers.ValidationError("Some drugs do not belong to the given prescription.")
+
+        return data
+
+    def update_status(self):
+        drug_ids = self.validated_data['drug_ids']
+        # Update only the valid drugs
+        Drug.objects.filter(id__in=drug_ids).update(status='confirmed')

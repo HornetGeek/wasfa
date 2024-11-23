@@ -18,6 +18,8 @@ from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import generics
+from rest_framework.decorators import api_view, permission_classes
+from django.db.models import Q
 
 
 class PatientPagination(PageNumberPagination):
@@ -145,3 +147,94 @@ class DrugViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(drugs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+class ConfirmDrugsView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = ConfirmDrugsSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.update_status()
+            return Response({"message": "Drugs confirmed successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['PATCH'])
+def confirm_user_status(request, user_id):
+    try:
+        # Fetch the user
+        user = CustomUsers.objects.get(id=user_id)
+        
+        # Update the status to 'confirmed'
+        user.status = 'confirmed'
+        user.save()
+        
+        return Response({"message": "User status updated to confirmed."}, status=status.HTTP_200_OK)
+    except CustomUsers.DoesNotExist:
+        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['GET'])
+def list_pending_pharmacy_users(request):
+    try:
+        # Filter users with role 'pharmacy' and status 'pending'
+        users = CustomUsers.objects.filter(role='pharmacy', status='pending')
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data, status=200)
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+
+@api_view(['GET'])
+def list_blocked_pharmacy_users(request):
+    try:
+        # Filter users with role 'pharmacy' and blocked=True
+        users = CustomUsers.objects.filter(role='pharmacy', blocked=True)
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data, status=200)
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+    
+
+@api_view(['GET'])
+def list_pending_users(request):
+    try:
+        # Fetch all users with status 'pending'
+        users = CustomUsers.objects.filter(status='pending')
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data, status=200)
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+    
+
+
+@api_view(['GET'])
+def search_sort_pharmacy_users(request):
+    try:
+        # Get query parameters for search and sorting
+        search_query = request.query_params.get('search', '')  # Default to empty string if not provided
+        sort_by = request.query_params.get('sort_by', 'fullName')  # Default to sorting by 'fullName'
+        sort_order = request.query_params.get('sort_order', 'asc')  # Default to ascending order
+
+        # Validate sort_by parameter to ensure it's either 'fullName' or 'created_at'
+        if sort_by not in ['fullName', 'created_at']:
+            return Response({"error": "Invalid sort field. Valid options are 'fullName' or 'created_at'."}, status=400)
+
+        # Handle sorting order
+        if sort_order == 'desc':
+            sort_by = f"-{sort_by}"
+
+        # Filter users by 'pharmacy' role and apply search query (if provided)
+        filters = Q(role='pharmacy')
+        if search_query:
+            filters &= (Q(fullName__icontains=search_query) | Q(email__icontains=search_query))
+
+        # Apply filters and sorting
+        users = CustomUsers.objects.filter(filters).order_by(sort_by)
+
+        # Serialize the data
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data, status=200)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
