@@ -53,6 +53,7 @@ class CustomUsers(AbstractBaseUser):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
+        ('refused', 'Refused')
     ]
 
     username = None
@@ -61,6 +62,7 @@ class CustomUsers(AbstractBaseUser):
     fullName = models.CharField(max_length=255, default='')
     civil_number = models.CharField(max_length=255, default='')
     Practice_License_Number = models.CharField(max_length=255, default='')
+    Commercial_number = models.CharField(max_length=255, default='')
     fcm_token = models.CharField(max_length=255, default='')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='doctor')
     blocked = models.BooleanField(default=False) 

@@ -23,6 +23,7 @@ urlpatterns = [
     path('filter/users/', UserListView.as_view({'get': 'list'}), name='user-list'),
     path('confirm-drugs/', ConfirmDrugsView.as_view(), name='confirm-drugs'),
     path('users/<int:user_id>/confirm-status/', confirm_user_status, name='confirm_user_status'),
+    path('users/<int:user_id>/refused-status/', refuse_user_status, name='refused_user_status'),
     path('users/pharmacy/pending/', list_pending_pharmacy_users, name='list_pending_pharmacy_users'),
     path('users/pharmacy/blocked/', list_blocked_pharmacy_users, name='list_blocked_pharmacy_users'),
     path('users/pending/', list_pending_users, name='list_pending_users'),

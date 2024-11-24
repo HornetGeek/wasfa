@@ -71,19 +71,34 @@ class EmailTokenObtainPairView(APIView):
 class CustomUserViewSet(viewsets.ModelViewSet):
     queryset = CustomUsers.objects.all()
     serializer_class = UserListSerializer
+    filter_backends = [SearchFilter]
+    search_fields = [
+        'email',                 # Search by email
+        'fullName',              # Search by full name
+        'civil_number',          # Search by civil number
+        'Practice_License_Number',  # Search by practice license number
+        'Commercial_number',     # Search by commercial number
+        'fcm_token',             # Search by FCM token
+        'role',                  # Search by role
+    ]
+    pagination_class = PatientPagination
 
 class UserListView(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserListSerializer
 
     def get_queryset(self):
         role = self.request.query_params.get('role', None)  # Get the 'role' parameter from the request
-        if role == 'doctor':
-            return CustomUsers.objects.filter(role='doctor')
-        elif role == 'pharmacy':
-            return CustomUsers.objects.filter(role='pharmacy')
-        else:
-            return CustomUsers.objects.none()  # Return empty queryset if role is invalid
         
+        # Base queryset to exclude blocked users
+        queryset = CustomUsers.objects.filter(blocked=False)
+        
+        # Filter by role if specified
+        if role == 'doctor':
+            return queryset.filter(role='doctor')
+        elif role == 'pharmacy':
+            return queryset.filter(role='pharmacy')
+        else:
+            return queryset.none()  # Return empty queryset if role is invalid
 class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all()
     serializer_class = PatientSerializer
@@ -174,38 +189,153 @@ def confirm_user_status(request, user_id):
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
+@api_view(['PATCH'])
+def refuse_user_status(request, user_id):
+    try:
+        # Fetch the user
+        user = CustomUsers.objects.get(id=user_id)
+
+        # Update the status to 'refused'
+        user.status = 'refused'
+        user.save()
+
+        return Response({"message": "User status updated to refused."}, status=status.HTTP_200_OK)
+    except CustomUsers.DoesNotExist:
+        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 def list_pending_pharmacy_users(request):
     try:
-        # Filter users with role 'pharmacy' and status 'pending'
-        users = CustomUsers.objects.filter(role='pharmacy', status='pending')
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data, status=200)
+        # Get query parameters for search and sorting
+        search_query = request.query_params.get('search', '')  # Default to empty string if not provided
+        sort_by = request.query_params.get('sort_by', 'fullName')  # Default to sorting by 'fullName'
+        sort_order = request.query_params.get('sort_order', 'asc')  # Default to ascending order
+
+        # Validate sort_by parameter to ensure it's one of the valid fields
+        valid_sort_fields = ['fullName', 'email', 'created_at', 'civil_number']
+        if sort_by not in valid_sort_fields:
+            return Response(
+                {"error": f"Invalid sort field. Valid options are {', '.join(valid_sort_fields)}."},
+                status=400
+            )
+
+        # Handle sorting order
+        if sort_order == 'desc':
+            sort_by = f"-{sort_by}"
+
+        # Filter users with role 'pharmacy' and status 'pending', apply search query if provided
+        filters = Q(role='pharmacy', status='pending')
+        if search_query:
+            filters &= (
+                Q(email__icontains=search_query) |
+                Q(fullName__icontains=search_query) |
+                Q(civil_number__icontains=search_query) |
+                Q(Practice_License_Number__icontains=search_query) |
+                Q(Commercial_number__icontains=search_query)
+            )
+
+        # Apply filters and sorting
+        users = CustomUsers.objects.filter(filters).order_by(sort_by)
+
+        # Apply pagination
+        paginator = PatientPagination()
+        paginated_users = paginator.paginate_queryset(users, request)
+        serializer = UserSerializer(paginated_users, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
+
     except Exception as e:
         return Response({"error": str(e)}, status=400)
 
 @api_view(['GET'])
 def list_blocked_pharmacy_users(request):
     try:
-        # Filter users with role 'pharmacy' and blocked=True
-        users = CustomUsers.objects.filter(role='pharmacy', blocked=True)
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data, status=200)
+        # Get query parameters for search and sorting
+        search_query = request.query_params.get('search', '')  # Default to empty string if not provided
+        sort_by = request.query_params.get('sort_by', 'fullName')  # Default to sorting by 'fullName'
+        sort_order = request.query_params.get('sort_order', 'asc')  # Default to ascending order
+
+        # Validate sort_by parameter to ensure it's one of the valid fields
+        valid_sort_fields = ['fullName', 'email', 'created_at', 'civil_number']
+        if sort_by not in valid_sort_fields:
+            return Response(
+                {"error": f"Invalid sort field. Valid options are {', '.join(valid_sort_fields)}."},
+                status=400
+            )
+
+        # Handle sorting order
+        if sort_order == 'desc':
+            sort_by = f"-{sort_by}"
+
+        # Filter users with role 'pharmacy' and blocked=True, apply search query if provided
+        filters = Q(role='pharmacy', blocked=True)
+        if search_query:
+            filters &= (
+                Q(email__icontains=search_query) |
+                Q(fullName__icontains=search_query) |
+                Q(civil_number__icontains=search_query) |
+                Q(Practice_License_Number__icontains=search_query) |
+                Q(Commercial_number__icontains=search_query)
+            )
+
+        # Apply filters and sorting
+        users = CustomUsers.objects.filter(filters).order_by(sort_by)
+
+        # Apply pagination
+        paginator = PatientPagination()
+        paginated_users = paginator.paginate_queryset(users, request)
+        serializer = UserSerializer(paginated_users, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
+
     except Exception as e:
         return Response({"error": str(e)}, status=400)
     
-
 @api_view(['GET'])
 def list_pending_users(request):
     try:
-        # Fetch all users with status 'pending'
-        users = CustomUsers.objects.filter(status='pending')
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data, status=200)
+        # Get query parameters for search and sorting
+        search_query = request.query_params.get('search', '')  # Default to empty string if not provided
+        sort_by = request.query_params.get('sort_by', 'fullName')  # Default to sorting by 'fullName'
+        sort_order = request.query_params.get('sort_order', 'asc')  # Default to ascending order
+
+        # Validate sort_by parameter to ensure it's one of the valid fields
+        valid_sort_fields = ['fullName', 'created_at', 'email', 'civil_number']
+        if sort_by not in valid_sort_fields:
+            return Response(
+                {"error": f"Invalid sort field. Valid options are {', '.join(valid_sort_fields)}."},
+                status=400
+            )
+
+        # Handle sorting order
+        if sort_order == 'desc':
+            sort_by = f"-{sort_by}"
+
+        # Filter users with status 'pending' and apply search query (if provided)
+        filters = Q(status='pending')
+        if search_query:
+            filters &= (
+                Q(email__icontains=search_query) |
+                Q(fullName__icontains=search_query) |
+                Q(civil_number__icontains=search_query) |
+                Q(Practice_License_Number__icontains=search_query) |
+                Q(Commercial_number__icontains=search_query)
+            )
+
+        # Apply filters and sorting
+        users = CustomUsers.objects.filter(filters).order_by(sort_by)
+
+        # Apply pagination
+        paginator = PatientPagination()
+        paginated_users = paginator.paginate_queryset(users, request)
+        serializer = UserSerializer(paginated_users, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
+
     except Exception as e:
         return Response({"error": str(e)}, status=400)
-    
 
 
 @api_view(['GET'])
