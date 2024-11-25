@@ -37,6 +37,8 @@ class CustomTokenObtainSerializer(serializers.Serializer):
             raise serializers.ValidationError('No active account found with the given credentials')
         if user.blocked:
             raise serializers.ValidationError('This user account is blocked')
+        if user.status == 'pending':  # Assuming 'status' is a field in the model
+            raise serializers.ValidationError('This user account is still pending approval')
 
         if not user.check_password(password):
             raise serializers.ValidationError('Invalid credentials')
@@ -65,6 +67,7 @@ class PatientSerializer(serializers.ModelSerializer):
 
     def get_prescription_count(self, obj):
         return obj.get_prescription_count()  # Call the method we defined on the Patient model
+    
 class PrescriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Prescription
