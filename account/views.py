@@ -15,7 +15,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from .serializers import PatientSerializer
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import generics
 from rest_framework.decorators import api_view, permission_classes
@@ -51,7 +51,8 @@ class RegisterView(APIView):
                 fullName=user_data.get('fullName', ''),
                 fcm_token=user_data.get('fcm_token', ''),
                 role=user_data.get('role', 'doctor'),
-                branch= user_data.get('branch', '')
+                branch= user_data.get('branch', ''),
+                title = user_data.get('title','')
             )
             return Response({"message": "Account created successfully"}, status=HTTP_201_CREATED)
         return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
@@ -86,48 +87,126 @@ class CustomUserViewSet(viewsets.ModelViewSet):
 
 class UserListView(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserListSerializer
+    pagination_class = PatientPagination  # Use the custom pagination class
 
     def get_queryset(self):
-        role = self.request.query_params.get('role', None)  # Get the 'role' parameter from the request
-        
-        # Base queryset to exclude blocked users
+        # Get query parameters
+        role = self.request.query_params.get('role', None)
+        search_query = self.request.query_params.get('search', '')
+        sort_by = self.request.query_params.get('sort_by', 'fullName')  # Default sort field
+        sort_order = self.request.query_params.get('sort_order', 'asc')  # Default sort order
+
+        # Mapping of valid sort fields to model fields
+        sort_field_mapping = {
+            'email': 'email',
+            'fullName': 'fullName',
+            'Commercial_number': 'Commercial_number',
+            'civil_number': 'civil_number',
+            'created_at': 'created_at',
+        }
+
+        # Validate the sort field
+        if sort_by not in sort_field_mapping:
+            raise ValueError(f"Invalid sort field. Valid options are: {', '.join(sort_field_mapping.keys())}.")
+
+        # Get the actual model field name
+        sort_by_field = sort_field_mapping[sort_by]
+
+        # Adjust sort_by for descending order
+        if sort_order == 'desc':
+            sort_by_field = f"-{sort_by_field}"
+
+        # Base queryset: exclude blocked users
         queryset = CustomUsers.objects.filter(blocked=False)
-        
-        # Filter by role if specified
-        if role == 'doctor':
-            return queryset.filter(role='doctor')
-        elif role == 'pharmacy':
-            return queryset.filter(role='pharmacy')
-        else:
-            return queryset.none()  # Return empty queryset if role is invalid
+
+        # Apply role filter if specified
+        if role:
+            queryset = queryset.filter(role=role)
+
+        # Apply search filter if specified
+        if search_query:
+            queryset = queryset.filter(
+                Q(email__icontains=search_query) |
+                Q(fullName__icontains=search_query) |
+                Q(civil_number__icontains=search_query) |
+                Q(Commercial_number__icontains=search_query) |
+                Q(Practice_License_Number__icontains=search_query)
+            )
+
+        # Apply sorting
+        queryset = queryset.order_by(sort_by_field)
+
+        return queryset
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            # Apply pagination
+            paginator = self.pagination_class()
+            paginated_queryset = paginator.paginate_queryset(queryset, request)
+            serializer = self.get_serializer(paginated_queryset, many=True)
+
+            return paginator.get_paginated_response(serializer.data)
+        except ValueError as ve:
+            return Response({"error": str(ve)}, status=400)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+
 class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all()
     serializer_class = PatientSerializer
-    filter_backends = [SearchFilter]
-    search_fields = ['idNumber']
+    filter_backends = [SearchFilter]  # Retain search functionality
+    search_fields = ['idNumber', 'name']
     pagination_class = PatientPagination
+
+    def get_queryset(self):
+        queryset = Patient.objects.all()
+
+        # Get query parameters for sorting
+        sort_by = self.request.query_params.get('sort_by', 'idNumber')  # Default sorting field
+        sort_order = self.request.query_params.get('sort_order', 'asc')  # Default sorting order
+
+        # Validate sort_by field
+        valid_sort_fields = ['idNumber', 'name', 'created_at']
+        if sort_by not in valid_sort_fields:
+            raise ValueError(f"Invalid sort field. Valid options are: {', '.join(valid_sort_fields)}.")
+
+        # Apply sorting order
+        if sort_order == 'desc':
+            sort_by = f"-{sort_by}"
+
+        # Apply ordering
+        queryset = queryset.order_by(sort_by)
+
+        return queryset
 
     @action(detail=False, methods=['get'], url_path='by-doctor')
     def get_patients_by_doctor(self, request):
         doctor_id = request.query_params.get('doctorId')
         if not doctor_id:
             return Response({"error": "doctorId parameter is required"}, status=400)
-        
-        patients = Patient.objects.filter(doctorId=doctor_id)
-        serializer = self.get_serializer(patients, many=True)
-        return Response(serializer.data)
-    
+
+        queryset = self.get_queryset().filter(doctorId=doctor_id)
+        # Apply pagination
+        paginator = self.pagination_class()
+        paginated_queryset = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(paginated_queryset, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
+
     @action(detail=False, methods=['get'], url_path='by-id-number')
     def get_patients_by_id_number(self, request):
         id_number = request.query_params.get('idNumber')
         if not id_number:
             return Response({"error": "idNumber parameter is required"}, status=400)
 
-        patients = Patient.objects.filter(idNumber=id_number)
-        serializer = self.get_serializer(patients, many=True)
-        return Response(serializer.data)
-    
+        queryset = self.get_queryset().filter(idNumber=id_number)
+        # Apply pagination
+        paginator = self.pagination_class()
+        paginated_queryset = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(paginated_queryset, many=True)
 
+        return paginator.get_paginated_response(serializer.data)
 class PrescriptionViewSet(viewsets.ModelViewSet):
     queryset = Prescription.objects.all()
     serializer_class = PrescriptionSerializer
