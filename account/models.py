@@ -68,8 +68,8 @@ class CustomUsers(AbstractBaseUser):
     branch = models.CharField(max_length=255, default='')
     blocked = models.BooleanField(default=False) 
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
-    title = models.CharField(max_length=20, choices=ROLE_CHOICES, default='')
-    country = models.CharField(max_length=20, choices=ROLE_CHOICES, default='')
+    title = models.CharField(max_length=20, default='')
+    country = models.CharField(max_length=20, default='')
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
