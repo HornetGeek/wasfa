@@ -50,7 +50,8 @@ class RegisterView(APIView):
                 password=user_data['password'],
                 fullName=user_data.get('fullName', ''),
                 fcm_token=user_data.get('fcm_token', ''),
-                role=user_data.get('role', 'doctor')
+                role=user_data.get('role', 'doctor'),
+                branch= user_data.get('branch', '')
             )
             return Response({"message": "Account created successfully"}, status=HTTP_201_CREATED)
         return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
