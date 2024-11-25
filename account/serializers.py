@@ -57,11 +57,14 @@ class CustomTokenObtainSerializer(serializers.Serializer):
     
 
 class PatientSerializer(serializers.ModelSerializer):
+    prescription_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Patient
-        fields = ('id', 'doctorId', 'name', 'idNumber', 'phone_number','created_at')
+        fields = ('id', 'doctorId', 'name', 'idNumber', 'phone_number','created_at','prescription_count')
 
-
+    def get_prescription_count(self, obj):
+        return obj.get_prescription_count()  # Call the method we defined on the Patient model
 class PrescriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Prescription

@@ -85,6 +85,9 @@ class Patient(models.Model):
     idNumber = models.CharField(max_length=255, default='')
     phone_number = models.CharField(max_length=255, default='')
     created_at = models.DateTimeField("Created at", auto_now=True)
+    
+    def get_prescription_count(self):
+        return self.prescription_set.count()  # Using the default related_name for the foreign key
 
 class Prescription(models.Model):
     TYPE_CHOICES = [
