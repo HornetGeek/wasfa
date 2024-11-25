@@ -9,14 +9,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUsers  # Use CustomUsers directly
-        fields = ('id', 'email', 'fullName','password', 'created_at', 'fcm_token', "civil_number","Practice_License_Number",'Commercial_number',"role", "profile_picture" ,'title', 'country', 'status')    
+        fields = ('id', 'email', 'fullName','password', 'created_at', 'fcm_token', "civil_number","Practice_License_Number",'Commercial_number',"role", "profile_picture" ,'title', 'country', 'status','branch')    
 
 
 
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUsers  # Use CustomUsers directly
-        fields = ('id', 'email', 'fullName', 'created_at', 'fcm_token', "civil_number","Practice_License_Number",'Commercial_number',"role" , "blocked","profile_picture", 'title', 'country', 'status')    
+        fields = ('id', 'email', 'fullName', 'created_at', 'fcm_token', "civil_number","Practice_License_Number",'Commercial_number',"role" , "blocked","profile_picture", 'title', 'country', 'status','branch')    
 
 
 

@@ -65,6 +65,7 @@ class CustomUsers(AbstractBaseUser):
     Commercial_number = models.CharField(max_length=255, default='')
     fcm_token = models.CharField(max_length=255, default='')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='doctor')
+    branch = models.CharField(max_length=255, default='')
     blocked = models.BooleanField(default=False) 
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
     title = models.CharField(max_length=20, choices=ROLE_CHOICES, default='')
