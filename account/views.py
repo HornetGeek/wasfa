@@ -52,6 +52,8 @@ class RegisterView(APIView):
                 fcm_token=user_data.get('fcm_token', ''),
                 role=user_data.get('role', 'doctor'),
                 branch= user_data.get('branch', ''),
+                civil_number = user_data.get("civil_number",""),
+                Commercial_number = user_data.get('Commercial_number',""),
                 title = user_data.get('title','')
             )
             return Response({"message": "Account created successfully"}, status=HTTP_201_CREATED)
